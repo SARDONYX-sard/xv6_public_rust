@@ -42,6 +42,42 @@ fn main() {
                 std::process::exit(1);
             }
         }
+        Some("qemu") => {
+            let mut profile = "debug".to_string(); // default
+
+            while let Some(arg) = args.next() {
+                match arg.as_str() {
+                    "--profile" => {
+                        if let Some(p) = args.next() {
+                            profile = p;
+                        } else {
+                            eprintln!("--profile requires a value (e.g. debug or release)");
+                            std::process::exit(1);
+                        }
+                    }
+                    unknown => {
+                        eprintln!("Unknown argument: {}", unknown);
+                        std::process::exit(1);
+                    }
+                }
+            }
+
+            let target_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../target/i686-xv6-none")
+                .join(&profile);
+
+            let img_path = target_dir.join("xv6.img");
+
+            if !img_path.exists() {
+                eprintln!(
+                    "Image not found: {}\nDid you run `cargo xtask image` first?",
+                    img_path.display()
+                );
+                std::process::exit(1);
+            }
+
+            run_qemu(&img_path);
+        }
         _ => {
             eprintln!("Usage: cargo run -p xtask -- image [--profile <debug|release>]");
             std::process::exit(1);
@@ -122,4 +158,26 @@ fn to_bin(src: &Path, dst: &Path) -> std::io::Result<ExitStatus> {
         .args(&["-O", "binary"])
         .arg(dst)
         .status()
+}
+
+fn run_qemu(img_path: &Path) {
+    println!("Running QEMU with image: {}", img_path.display());
+
+    let status = Command::new("qemu-system-i386")
+        .arg("-drive")
+        .arg(format!("format=raw,file={}", img_path.display()))
+        .arg("-m")
+        .arg("64M")
+        .arg("-no-reboot")
+        .arg("-serial")
+        .arg("mon:stdio")
+        .arg("-display")
+        .arg("none") // GUI不要な場合
+        .status()
+        .expect("Failed to execute qemu-system-i386");
+
+    if !status.success() {
+        eprintln!("QEMU exited with error code: {:?}", status.code());
+        std::process::exit(1);
+    }
 }

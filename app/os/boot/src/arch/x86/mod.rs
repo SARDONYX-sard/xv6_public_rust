@@ -1,5 +1,5 @@
 #[doc = include_str!("./boot.asm_description.md")]
-mod boot {}
+mod boot;
 
 mod consts;
 
