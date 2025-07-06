@@ -37,6 +37,11 @@ core::arch::global_asm!(
 .global start
 .extern bootmain
 
+# Start the first CPU: switch to 32-bit protected mode, jump into Rust.
+# The BIOS loads this code from the first sector of the hard disk into
+# memory at physical address 0x7c00 and starts executing in real mode
+# with cs=0 ip=7c00.
+
 # 1/12: Real Mode, entry point setup
 .code16
 start:
@@ -45,13 +50,13 @@ start:
 
     # 3/12: Clear segment registers (required in real mode)
     xor ax, ax
-    mov ds, ax
-    mov es, ax
-    mov ss, ax
+    mov ds, ax    # clear .data
+    mov es, ax    # clear .extra
+    mov ss, ax    # clear .stack
 
     # 4/12: Enable A20 line to allow addressing >1MB memory
 seta20_1:
-    in al, 0x64
+    in al, 0x64    # wait for not busy
     test al, 0x2
     jnz seta20_1
 
@@ -59,23 +64,32 @@ seta20_1:
     out 0x64, al
 
 seta20_2:
-    in al, 0x64
+    in al, 0x64    # wait for not busy
     test al, 0x2
     jnz seta20_2
 
     mov al, 0xdf
     out 0x60, al
 
+    # /////////////////////////////////////////
+    # Switch from real to protected mode.  Use a bootstrap GDT that makes
+    # virtual addresses map directly to physical addresses so that the
+    # effective memory map doesn't change during the transition.
+
     # 5/12: Load Global Descriptor Table (GDT)
     lgdt [gdtdesc]
 
-    # 6/12: Enable Protected Mode (set PE bit in CR0)
+    # 6/12: Enable Protected Mode (set PE bit(0x1) in CR0)
     mov eax, cr0
     or eax, 0x1
     mov cr0, eax
 
+    # PAGE BREAK!
+    # Complete the transition to 32-bit protected mode by using a long jmp
+    # to reload %cs and %eip.  The segment descriptors are set up with no
+    # translation, so that the mapping is still the identity mapping.
     # 7/12: Far jump to flush pipeline and reload CS for Protected Mode
-    jmp start32
+    jmp [start32 + 8] # 8: 1(SEG_KCODE) << 3
 
 .code32
 start32:
@@ -111,7 +125,7 @@ gdt:
     SEG_ASM 0x2, 0x00000000, 0xFFFFFFFF        # Data Segment
 
 gdtdesc:
-    .word gdtdesc - gdt - 1
+    .word gdtdesc - gdt - 1     # sizeof(gdt) - 1
     .long gdt
 "#
 );

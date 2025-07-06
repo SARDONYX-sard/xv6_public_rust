@@ -14,8 +14,7 @@ multiboot_header:
     .long -(0x1BADB002 + 0)
 
 .global _start
-_start:
-    jmp entry_phys
+_start = [entry - {kernel_base}]   # addr - KERNEL_BASE: Virt to Phys addr
 
 .global entry
 entry:
@@ -23,22 +22,22 @@ entry:
     or eax, 0x10          # CR4_PSE
     mov cr4, eax
 
-    mov eax, offset ENTRY_PG_DIR
-    sub eax, 0x80000000   # V2P_WO(ENTRY_PG_DIR)
+    # Set page dir
+    mov eax, [ENTRY_PG_DIR - {kernel_base}] # eax = virt_to_phys_addr(ENTRY_PG_DIR)
     mov cr3, eax
 
+    # Turn on paging
     mov eax, cr0
     or eax, 0x80010000    # CR0_PG | CR0_WP
     mov cr0, eax
 
-    mov esp, offset STACK_TOP
+    mov esp, [STACK - {k_stack_size}]
 
     mov eax, offset main
     jmp eax
-
-entry_phys:
-    jmp entry
-"#
+"#,
+    kernel_base = const KERNEL_BASE,
+    k_stack_size = const K_STACK_SIZE,
 );
 
 #[unsafe(no_mangle)]
@@ -66,6 +65,3 @@ const fn make_entry_pg_dir() -> AlignedPdeArray {
 #[unsafe(no_mangle)]
 #[unsafe(link_section = ".bss.stack")]
 static mut STACK: [u8; K_STACK_SIZE] = [0; K_STACK_SIZE];
-
-#[unsafe(no_mangle)]
-pub static STACK_TOP: u32 = 0x0; // patched later if needed

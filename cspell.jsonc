@@ -13,6 +13,7 @@
     "outb",
     "repr",
     "rustc",
+    "virt",
     "xtask"
   ]
 }

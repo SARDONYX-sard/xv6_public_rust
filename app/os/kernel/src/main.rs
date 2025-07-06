@@ -27,7 +27,8 @@ pub extern "C" fn main() -> ! {
     let mut serial = SerialPort;
     writeln!(serial, "Hello, xv6 Rust!").unwrap();
 
-    qemu_exit(0);
+    loop {}
+    // qemu_exit(0);
 }
 
 fn qemu_exit(code: u8) -> ! {
