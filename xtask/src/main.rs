@@ -1,9 +1,7 @@
 use std::fs::{File, read};
-use std::io::{Seek, SeekFrom, Write};
+use std::io::Write as _;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus};
-
-const BOOT_BLOCK_SIZE: usize = 32 * 1024;
 
 fn main() {
     let mut args = std::env::args().skip(1);
@@ -114,9 +112,10 @@ fn build_crate(crate_name: &str, profile: &str) {
 /// |   bootloader image            |
 /// |   ├─ 32 KiB zero padding      |
 /// |   ├─ boot                     |
-/// |   └─ (zero-filled up to 512) |
+/// |   └─ (zero-filled up to 510)  |
+/// |   0x55AA <- boot symbol       |
 /// |                               |
-/// [ 0x8000 ---------------------- ]
+/// [ 0x0200 ---------------------- ]
 /// |                               |
 /// |   kernel binary               |
 /// |   └─ raw ELF or flat image    |
@@ -124,38 +123,49 @@ fn build_crate(crate_name: &str, profile: &str) {
 /// [ end --------------------------]
 /// ```
 fn create_image(target_dir: &Path) -> std::io::Result<()> {
-    let boot = target_dir.join("boot");
     let boot_bin = target_dir.join("boot.bin");
+    {
+        let boot = target_dir.join("boot");
+        to_bin(&boot, &boot_bin).expect("cargo-objcopy boot failed");
+    }
+    let mut boot = read(&boot_bin).expect("Failed to read boot.bin binary");
+    strip_trailing_zeros(&mut boot);
 
-    to_bin(&boot, &boot_bin).expect("cargo-objcopy boot failed");
-    let boot = read(&boot_bin).expect("Failed to read boot.bin binary");
+    // Add 0x55AA boot signature if missing
+    const BOOT_SIGNATURE: &[u8] = &[0x55, 0xAA];
+    let boot_len = boot.len();
+    match boot_len {
+        510 => boot.extend_from_slice(BOOT_SIGNATURE),
+        len if len < 510 => {
+            boot.extend(std::iter::repeat(0).take(510 - len));
+            boot.extend_from_slice(BOOT_SIGNATURE);
+        }
+        _ => panic!("Bootloader is too large ({boot_len} bytes). need <= 510bytes",),
+    }
 
     let kernel = read(target_dir.join("kernel")).expect("Failed to read kernel binary");
 
     let mut img = File::create(target_dir.join("xv6.img"))?;
-
-    img.write_all(&vec![0u8; BOOT_BLOCK_SIZE])?;
-    img.seek(SeekFrom::Start(0))?;
     img.write_all(&boot)?;
-
-    if boot.len() < BOOT_BLOCK_SIZE {
-        let pad_size = BOOT_BLOCK_SIZE - boot.len();
-        img.write_all(&vec![0u8; pad_size])?;
-    }
-
-    img.seek(SeekFrom::Start(BOOT_BLOCK_SIZE as u64))?;
     img.write_all(&kernel)?;
 
     println!("xv6.img created successfully in {}", target_dir.display());
     Ok(())
 }
 
+fn strip_trailing_zeros(data: &mut Vec<u8>) {
+    while data.last() == Some(&0) {
+        data.pop();
+    }
+}
+
 fn to_bin(src: &Path, dst: &Path) -> std::io::Result<ExitStatus> {
     Command::new("rust-objcopy")
-        .arg("--binary-architecture=i386")
-        .arg("--strip-all")
-        .arg(src)
+        // .arg("--binary-architecture=i386")
+        // .arg("--strip-all")
+        .arg("-S")
         .args(&["-O", "binary"])
+        .arg(src)
         .arg(dst)
         .status()
 }
@@ -171,8 +181,10 @@ fn run_qemu(img_path: &Path) {
         .arg("-no-reboot")
         .arg("-serial")
         .arg("mon:stdio")
-        .arg("-display")
-        .arg("none") // GUI不要な場合
+        // .arg("-display")
+        // .arg("none")
+        .args(&["-d", "guest_errors"])
+        .args(&["-no-reboot", "-no-shutdown"])
         .status()
         .expect("Failed to execute qemu-system-i386");
 

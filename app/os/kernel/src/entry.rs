@@ -41,9 +41,27 @@ entry_phys:
 "#
 );
 
-// Dummy symbol definitions for linking
 #[unsafe(no_mangle)]
-pub static mut ENTRY_PG_DIR: [u32; 1024] = [0; 1024];
+static ENTRY_PG_DIR: AlignedPdeArray = make_entry_pg_dir();
+
+const N_PD_ENTRIES: usize = 1024;
+const PTE_P: u32 = 0x001; // Present
+const PTE_W: u32 = 0x002; // Writable
+const PTE_PS: u32 = 0x080; // Page size (4MB)
+const KERNEL_BASE: usize = 0x8000_0000; // 例
+/// 4MiB shift
+const PDX_SHIFT: usize = 22;
+
+#[allow(unused)]
+#[repr(align(4096))]
+struct AlignedPdeArray([u32; N_PD_ENTRIES]);
+
+const fn make_entry_pg_dir() -> AlignedPdeArray {
+    let mut arr = [0u32; N_PD_ENTRIES];
+    arr[0] = (0) | PTE_P | PTE_W | PTE_PS;
+    arr[KERNEL_BASE >> PDX_SHIFT] = (0) | PTE_P | PTE_W | PTE_PS;
+    AlignedPdeArray(arr)
+}
 
 #[unsafe(no_mangle)]
 #[unsafe(link_section = ".bss.stack")]

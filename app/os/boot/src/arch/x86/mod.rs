@@ -27,7 +27,7 @@ pub extern "C" fn bootmain() {
         }
 
         let program_header: *const ProgramHeader = {
-            let program_header_offset = read_volatile(&(*elf_ptr).program_header_offset) as usize;
+            let program_header_offset = (*elf_ptr).program_header_offset as usize;
             elf_ptr.byte_add(program_header_offset).cast()
         };
         let header_count = read_volatile(&(*elf_ptr).program_header_entry_size) as usize;

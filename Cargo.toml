@@ -27,13 +27,12 @@ default-members = ["app/os/kernel"]
 resolver = "3"
 
 
-# [profile.release]
-# codegen-units = 1
-# debug = false
-# lto = true
-# opt-level = 3
-# panic = 'abort'
-# strip = true
+[profile.release]
+opt-level = "z"   # NOTE: Otherwise, the bootloader will not fit within 512 bytes.
+codegen-units = 1
+panic = "abort"
+strip = true
+debug = false
 
 
 [workspace.lints.clippy]

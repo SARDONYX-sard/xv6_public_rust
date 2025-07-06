@@ -75,7 +75,7 @@ seta20_2:
     mov cr0, eax
 
     # 7/12: Far jump to flush pipeline and reload CS for Protected Mode
-    jmp [start32 + 0x08]
+    jmp start32
 
 .code32
 start32:
