@@ -1,0 +1,12 @@
+[package]
+name = "trap"
+version = "0.1.0"
+description = "signal, system call event handler"
+
+authors.workspace = true
+categories.workspace = true
+edition.workspace = true
+keywords.workspace = true
+readme = "../../README.md"
+repository.workspace = true
+rust-version.workspace = true

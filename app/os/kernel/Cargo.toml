@@ -1,0 +1,19 @@
+[package]
+name = "kernel"
+version = "0.1.0"
+description = "xv6 kernel"
+
+authors.workspace = true
+categories.workspace = true
+edition.workspace = true
+keywords.workspace = true
+readme = "../../README.md"
+repository.workspace = true
+rust-version.workspace = true
+
+
+[dependencies]
+page = { path = "../../../crates/page" }
+memory = { path = "../../../crates/memory" }
+trap = { path = "../../../crates/trap" }
+syscall = { path = "../../../crates/syscall" }

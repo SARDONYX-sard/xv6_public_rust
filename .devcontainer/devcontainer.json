@@ -1,0 +1,35 @@
+{
+  "name": "xv6-rust-dev",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      },
+      "extensions": [
+        "davidanson.vscode-markdownlint",
+        "eamodio.gitlens",
+        "editorconfig.editorconfig",
+        "mateuszchudyk.hexinspector",
+        "mhutchie.git-graph",
+        "ms-vscode-remote.remote-containers",
+        "ms-vscode.hexeditor",
+        "oderwat.indent-rainbow",
+        "pkief.material-icon-theme",
+        "redhat.vscode-yaml",
+        "richie5um2.vscode-sort-json",
+        "rust-lang.rust-analyzer",
+        "serayuzgur.crates",
+        "streetsidesoftware.code-spell-checker",
+        "tamasfe.even-better-toml",
+        "tyriar.sort-lines",
+        "yzhang.markdown-all-in-one"
+      ]
+    }
+  },
+  "mounts": ["source=${localWorkspaceFolder}/target,target=/workspace/target,type=bind"],
+  "remoteUser": "vscode"
+}

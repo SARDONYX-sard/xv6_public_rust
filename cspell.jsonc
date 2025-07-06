@@ -1,0 +1,18 @@
+{
+  "words": [
+    "AHCI",
+    "Bochs",
+    "bootmain",
+    "gdtdesc",
+    "insl",
+    "LGDT",
+    "nasm",
+    "nostack",
+    "NULLASM",
+    "objcopy",
+    "outb",
+    "repr",
+    "rustc",
+    "xtask"
+  ]
+}
