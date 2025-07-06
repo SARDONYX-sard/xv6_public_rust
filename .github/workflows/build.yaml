@@ -44,7 +44,14 @@ jobs:
 
       - name: Run QEMU to test xv6.img boot
         run: |
-          qemu-system-i386 -drive file=target/i686-xv6-none/release/xv6.img,format=raw -serial stdio -nographic -m 512M -boot c -display none &
+          qemu-system-i386 \
+            -drive file=target/i686-xv6-none/release/xv6.img,format=raw \
+            -serial stdio \
+            -nographic \
+            -m 512M \
+            -boot c \
+            -display none &
           QEMU_PID=$!
+          echo "QEMU started with PID $QEMU_PID"
           sleep 10
-          kill $QEMU_PID
+          kill $QEMU_PID || echo "QEMU process already exited"
